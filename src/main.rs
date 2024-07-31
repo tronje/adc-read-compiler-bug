@@ -2,7 +2,7 @@
 #![no_main]
 #![feature(abi_avr_interrupt)]
 
-use atmega_hal::adc::{AdcSettings, ClockDivider, ReferenceVoltage};
+use ufmt::uwriteln;
 use atmega_hal::clock::MHz10;
 use atmega_hal::port::mode::{AnyInput, Floating, Input, Output};
 use atmega_hal::port::{Pin, PB7, PC0, PC1, PD0, PD1};
@@ -12,7 +12,6 @@ use core::panic::PanicInfo;
 use embedded_hal::blocking::delay::DelayMs;
 use mcp23017::PinMode::OUTPUT;
 
-type Adc = atmega_hal::Adc<MHz10>;
 type Delay = atmega_hal::delay::Delay<MHz10>;
 type I2C = atmega_hal::I2c<MHz10>;
 type MCP23017 = mcp23017::MCP23017<I2C>;
@@ -59,13 +58,6 @@ fn main() -> ! {
 
     ufmt::uwriteln!(serial, "starting\r").ok();
 
-    let adc_settings = AdcSettings {
-        clock_divider: ClockDivider::Factor16,
-        ref_voltage: ReferenceVoltage::AVcc,
-    };
-
-    let mut adc = Adc::new(dp.ADC, adc_settings);
-
     let mut mcp = get_mcp23017(
         dp.TWI,
         pins.pc0.into_floating_input(),
@@ -82,11 +74,11 @@ fn main() -> ! {
 
     pins.pb2.into_output().set_high();
 
-    let pin = pins.pa0.into_floating_input().into_analog_input(&mut adc);
+    let pin = pins.pa0.into_floating_input();
 
     loop {
-        let val = pin.analog_read(&mut adc);
-        ufmt::uwriteln!(serial, "value: {}\r", val).ok();
+        let high = pin.is_high();
+        uwriteln!(serial, "{}\r", high).ok();
         delay_ms(100);
     }
 }

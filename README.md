@@ -17,3 +17,10 @@ Unfortunately, for me to reproduce this issue, a MCP23017 GPIO expander needs
 to be set up, and two of its outputs pulled. So I'm not sure how easy this may
 be for others to reproduce. I'm assuming any analog read on any pin should
 cause the same issues.
+
+## Digital Reads
+
+Rather than performing analog reads and digitizing values using the ADC, the pin
+can of course be read digitally (`is_high`). This causes the same behavior;
+with the new toolchain, `is_high` always returns `false`, but with the old toolchain,
+always `true` (which should be correct).
