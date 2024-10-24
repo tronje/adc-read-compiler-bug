@@ -47,6 +47,8 @@ fn get_mcp23017(
 
 #[inline(never)]
 fn configure_mcp23017(mcp: &mut MCP23017) {
+    mcp.init_hardware().unwrap();
+
     mcp.pin_mode(1, OUTPUT).unwrap();
     mcp.digital_write(1, true).unwrap();
 
