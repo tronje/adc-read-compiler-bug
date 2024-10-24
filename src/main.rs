@@ -7,7 +7,7 @@ use atmega_hal::clock::MHz10;
 use atmega_hal::port::mode::{AnyInput, Floating, Input, Output};
 use atmega_hal::port::{Pin, PB7, PC0, PC1, PD0, PD1};
 use atmega_hal::usart::BaudrateExt;
-use avr_device::atmega164pa::{TWI, USART0};
+use atmega_hal::pac::{TWI, USART0};
 use core::panic::PanicInfo;
 use embedded_hal::blocking::delay::DelayMs;
 use mcp23017::PinMode::OUTPUT;
