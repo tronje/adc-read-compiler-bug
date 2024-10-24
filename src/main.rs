@@ -2,15 +2,15 @@
 #![no_main]
 #![feature(abi_avr_interrupt)]
 
-use ufmt::uwriteln;
 use atmega_hal::clock::MHz10;
 use atmega_hal::port::mode::{AnyInput, Floating, Input, Output};
-use atmega_hal::port::{Pin, PB7, PC0, PC1, PD0, PD1};
+use atmega_hal::port::{Pin, PA0, PB2, PB7, PC0, PC1, PD0, PD1};
 use atmega_hal::usart::BaudrateExt;
 use atmega_hal::pac::{TWI, USART0};
 use core::panic::PanicInfo;
 use embedded_hal::blocking::delay::DelayMs;
 use mcp23017::PinMode::OUTPUT;
+use ufmt::uwriteln;
 
 type Delay = atmega_hal::delay::Delay<MHz10>;
 type I2C = atmega_hal::I2c<MHz10>;
@@ -27,6 +27,7 @@ fn panic(_: &PanicInfo) -> ! {
     loop {}
 }
 
+#[inline(never)]
 fn get_mcp23017(
     twi: TWI,
     i2c_scl: Pin<Input<Floating>, PC0>,
@@ -42,6 +43,48 @@ fn get_mcp23017(
     delay_ms(50);
 
     mcp23017::MCP23017::default(i2c).unwrap()
+}
+
+#[inline(never)]
+fn configure_mcp23017(mcp: &mut MCP23017) {
+    mcp.pin_mode(1, OUTPUT).unwrap();
+    mcp.digital_write(1, true).unwrap();
+
+    mcp.pin_mode(6, OUTPUT).unwrap();
+    mcp.pull_up(6, true).unwrap();
+    mcp.digital_write(6, true).unwrap();
+}
+
+/// Pull PB2 high.
+///
+/// Assembly is the same regardless of whether toolchain is bugged or not:
+///
+/// ```asm
+/// cbi	0x05, 2	; 5
+/// sbi	0x04, 2	; 4
+/// sbi	0x05, 2	; 5
+/// ret
+/// ```
+#[inline(never)]
+fn configure_pb2(pin: Pin<Input<Floating>, PB2>) {
+    pin.into_output().set_high();
+}
+
+/// Read the pin, this produces invalid outputs on toolchains newer than
+/// `rustc 1.77.0-nightly (f688dd684 2024-01-04)`.
+///
+/// However, the generated assembly is the same between working and bugged toolchains:
+///
+/// ```asm
+/// in	r24, 0x00	; 0
+/// andi	r24, 0x01	; 1
+/// eor	r25, r25
+/// ret
+/// ```
+#[inline(never)]
+fn read_pin(pin: &Pin<Input<Floating>, PA0>) -> bool {
+    let high = pin.is_high();
+    high
 }
 
 #[avr_device::entry]
@@ -65,20 +108,21 @@ fn main() -> ! {
         pins.pb7.into_output(),
     );
 
-    mcp.pin_mode(1, OUTPUT).unwrap();
-    mcp.digital_write(1, true).unwrap();
+    configure_mcp23017(&mut mcp);
 
-    mcp.pin_mode(6, OUTPUT).unwrap();
-    mcp.pull_up(6, true).unwrap();
-    mcp.digital_write(6, true).unwrap();
+    configure_pb2(pins.pb2);
 
-    pins.pb2.into_output().set_high();
-
-    let pin = pins.pa0.into_floating_input();
+    let pin = pins.pa0;
 
     loop {
-        let high = pin.is_high();
-        uwriteln!(serial, "{}\r", high).ok();
-        delay_ms(100);
+        let high = read_pin(&pin);
+
+        if high {
+            uwriteln!(serial, "OK\r").ok();
+        } else {
+            uwriteln!(serial, "BUG\r").ok();
+        }
+
+        delay_ms(500);
     }
 }
