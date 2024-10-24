@@ -16,7 +16,7 @@ ufmt = "0.2.0"
 
 [dependencies.atmega-hal]
 git = "https://github.com/rahix/avr-hal"
-rev = "afdadebd2c8bc0969bd2025f94617b64ca101014"
+rev = "15080aa41e726bc720adf36ce0fc5a030390c822"
 features = ["atmega164pa"]
 
 [profile.dev]
